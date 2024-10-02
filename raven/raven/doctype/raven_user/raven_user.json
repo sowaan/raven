@@ -20,7 +20,9 @@
   "pinned_channels",
   "user_status_section",
   "availability_status",
-  "custom_status"
+  "custom_status",
+  "layout_preference_section",
+  "chat_style"
  ],
  "fields": [
   {
@@ -116,11 +118,22 @@
    "fieldname": "user_status_section",
    "fieldtype": "Section Break",
    "label": "User Status"
+  },
+  {
+   "fieldname": "layout_preference_section",
+   "fieldtype": "Section Break",
+   "label": "Layout Preference"
+  },
+  {
+   "fieldname": "chat_style",
+   "fieldtype": "Select",
+   "label": "Chat Style",
+   "options": "Simple\nLeft-Right"
   }
  ],
  "image_field": "user_image",
  "links": [],
- "modified": "2024-07-26 20:46:52.128509",
+ "modified": "2024-09-20 16:59:55.256339",
  "modified_by": "Administrator",
  "module": "Raven",
  "name": "Raven User",

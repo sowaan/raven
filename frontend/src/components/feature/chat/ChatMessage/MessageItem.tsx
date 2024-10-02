@@ -14,7 +14,7 @@ import { FileMessageBlock } from './Renderers/FileMessage'
 import { PollMessageBlock } from './Renderers/PollMessage'
 import { TiptapRenderer } from './Renderers/TiptapRenderer/TiptapRenderer'
 import { QuickActions } from './MessageActions/QuickActions/QuickActions'
-import { memo, useMemo, useState } from 'react'
+import { memo, useContext, useMemo, useState } from 'react'
 import { ReplyMessageBox } from './ReplyMessageBox/ReplyMessageBox'
 import { generateAvatarColor } from '../../selectDropdowns/GenerateAvatarColor'
 import { DoctypeLinkRenderer } from './Renderers/DoctypeLinkRenderer'
@@ -25,6 +25,10 @@ import { useDoubleTap } from 'use-double-tap'
 import useOutsideClick from '@/hooks/useOutsideClick'
 import { getStatusText } from '../../userSettings/AvailabilityStatus/SetUserAvailabilityMenu'
 import { ThreadMessage } from './Renderers/ThreadMessage'
+import { UserContext } from '@/utils/auth/UserProvider'
+
+// @ts-expect-error
+const CHAT_STYLE = window.frappe?.boot.chat_style
 
 interface MessageBlockProps {
     message: Message,
@@ -44,6 +48,8 @@ export const MessageItem = ({ message, setDeleteMessage, isHighlighted, onReplyM
     const { name, owner: userID, is_bot_message, bot, creation: timestamp, message_reactions, is_continuation, linked_message, replied_message_details } = message
 
     const { user, isActive } = useGetUserDetails(is_bot_message && bot ? bot : userID)
+
+    const { currentUser } = useContext(UserContext)
 
     const onDelete = () => {
         setDeleteMessage(message)
@@ -107,11 +113,13 @@ export const MessageItem = ({ message, setDeleteMessage, isHighlighted, onReplyM
 
     const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false)
 
+    const alignToRight = CHAT_STYLE === 'Left-Right' && userID === currentUser
+
     return (
-        <Box className='relative'>
+        <Box className={clsx('relative', CHAT_STYLE === 'Left-Right' ? alignToRight ? 'flex justify-end' : 'flex justify-start' : ' ')}>
             {!message.is_continuation && message.is_thread ?
                 <div
-                    className={`absolute 
+                    className={`absolute
                         border-l
                         border-b
                         border-gray-5 
@@ -145,15 +153,20 @@ export const MessageItem = ({ message, setDeleteMessage, isHighlighted, onReplyM
                             px-1
                             py-2
                             sm:p-2
-                            rounded-md`, isHighlighted ? 'bg-yellow-50 hover:bg-yellow-50 dark:bg-yellow-300/20 dark:hover:bg-yellow-300/20' : !isDesktop && isHovered ? 'bg-gray-2 dark:bg-gray-3' : '', isEmojiPickerOpen ? 'bg-gray-2 dark:bg-gray-3' : '')}>
+                            rounded-md`,
+                        isHighlighted ? 'bg-yellow-50 hover:bg-yellow-50 dark:bg-yellow-300/20 dark:hover:bg-yellow-300/20' :
+                            !isDesktop && isHovered ? 'bg-gray-2 dark:bg-gray-3' :
+                                isEmojiPickerOpen ? 'bg-gray-2 dark:bg-gray-3' : '',
+                        CHAT_STYLE === 'Left-Right' ? alignToRight ? `my-0.5 bg-accent-4 dark:bg-accent-a3 rounded-br-none mr-2 sm:px-3 sm:py-4` :
+                            'my-0.5 bg-gray-2 dark:bg-gray-3 rounded-bl-none min-w-96 sm:px-3 sm:py-4' : '')}>
                     <Flex className='gap-2.5 sm:gap-3 items-start'>
-                        <MessageLeftElement message={message} user={user} isActive={isActive} />
+                        {!alignToRight && <MessageLeftElement message={message} user={user} isActive={isActive} />}
                         <Flex direction='column' className='gap-0.5' justify='center' width='100%'>
-                            {!is_continuation ? <Flex align='center' gap='2' mt='-1'>
-                                <UserHoverCard
+                            {!is_continuation ? <Flex align='center' justify={alignToRight ? 'end' : 'start'} gap='2' mt='-1' pt={'0'}>
+                                {!alignToRight && <UserHoverCard
                                     user={user}
                                     userID={userID}
-                                    isActive={isActive} />
+                                    isActive={isActive} />}
                                 <DateTooltip timestamp={timestamp} />
                             </Flex>
                                 : null}
@@ -200,10 +213,11 @@ export const MessageItem = ({ message, setDeleteMessage, isHighlighted, onReplyM
                                 onForward={onForward}
                                 showThreadButton={showThreadButton}
                                 onAttachDocument={onAttachToDocument}
+                                align={alignToRight}
+                                chatStyle={CHAT_STYLE}
                             />
                         }
                     </Flex>
-
                 </ContextMenu.Trigger>
 
                 <MessageContextMenu
@@ -217,7 +231,7 @@ export const MessageItem = ({ message, setDeleteMessage, isHighlighted, onReplyM
                     onAttachDocument={onAttachToDocument}
                 />
             </ContextMenu.Root>
-        </Box>
+        </Box >
     )
 }
 

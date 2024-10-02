@@ -17,9 +17,11 @@ const QUICK_EMOJIS = ['👍', '✅', '👀', '🎉']
 interface QuickActionsProps extends MessageContextMenuProps {
     isEmojiPickerOpen: boolean,
     setIsEmojiPickerOpen: (open: boolean) => void,
+    chatStyle: 'Simple' | 'Left-Right',
+    align: boolean
 }
 
-export const QuickActions = ({ message, onReply, onEdit, isEmojiPickerOpen, setIsEmojiPickerOpen, showThreadButton = true }: QuickActionsProps) => {
+export const QuickActions = ({ message, onReply, onEdit, isEmojiPickerOpen, setIsEmojiPickerOpen, align, showThreadButton = true, chatStyle }: QuickActionsProps) => {
 
     const { currentUser } = useContext(UserContext)
 
@@ -59,10 +61,12 @@ export const QuickActions = ({ message, onReply, onEdit, isEmojiPickerOpen, setI
         })
     }
 
+    const positionClass = chatStyle === 'Simple' ? 'right-4' : align ? 'right-4' : 'left-4'
+
     return (
-        <Box ref={toolbarRef} className='absolute
+        <Box ref={toolbarRef} className={`absolute
         -top-6
-        right-4
+        ${positionClass}
         group-hover:visible
         group-hover:transition-all
         ease-ease-out-quad
@@ -73,7 +77,7 @@ export const QuickActions = ({ message, onReply, onEdit, isEmojiPickerOpen, setI
         rounded-md
         bg-white
         dark:bg-gray-1
-        invisible'>
+        invisible`}>
             <Flex gap='1'>
                 {QUICK_EMOJIS.map((emoji) => {
                     return <QuickActionButton

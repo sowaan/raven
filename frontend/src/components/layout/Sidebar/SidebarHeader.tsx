@@ -47,7 +47,9 @@ const SearchButton = () => {
 
 const ColorModeToggleButton = () => {
 
-    const { appearance, toggleTheme } = useTheme()
+    const { appearance, setAppearance } = useTheme()
+
+    const theme = appearance === 'inherit' ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : appearance
 
     return <Flex align='center' justify='center' pr='1'>
         <IconButton
@@ -57,8 +59,8 @@ const ColorModeToggleButton = () => {
             color='gray'
             className='text-gray-11 sm:hover:text-gray-12'
             variant='ghost'
-            onClick={toggleTheme}>
-            {appearance === 'light' ? <BiMoon className='text-lg sm:text-base' /> : <BiSun className='text-lg sm:text-base' />}
+            onClick={() => setAppearance(theme === 'light' ? 'dark' : 'light')}>
+            {theme === 'light' ? <BiMoon className='text-lg sm:text-base' /> : <BiSun className='text-lg sm:text-base' />}
         </IconButton>
     </Flex>
 }
