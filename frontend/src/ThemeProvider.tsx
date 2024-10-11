@@ -44,7 +44,7 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
 
     return (
         <Theme {...props}>
-            <ThemeContext.Provider value={{ appearance: props.appearance as 'light' | 'dark', setAppearance }}>
+            <ThemeContext.Provider value={{ appearance: props.appearance as 'light' | 'dark' | 'inherit', setAppearance }}>
                 {children}
             </ThemeContext.Provider>
         </Theme>
@@ -57,7 +57,7 @@ interface ThemeContextType {
 }
 export const ThemeContext = React.createContext<ThemeContextType>({
     appearance: 'dark',
-    setAppearance: () => { },
+    setAppearance: (appearance: 'light' | 'dark' | 'inherit') => { },
 });
 
 export const useTheme = () => React.useContext(ThemeContext);
