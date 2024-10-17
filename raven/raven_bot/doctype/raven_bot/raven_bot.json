@@ -28,7 +28,9 @@
   "section_break_lwkx",
   "instruction",
   "dynamic_instructions",
-  "bot_functions"
+  "bot_functions",
+  "section_break_mpal",
+  "ai_data_sources"
  ],
  "fields": [
   {
@@ -159,12 +161,22 @@
    "fieldname": "debug_mode",
    "fieldtype": "Check",
    "label": "Debug Mode"
+  },
+  {
+   "fieldname": "section_break_mpal",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "ai_data_sources",
+   "fieldtype": "Table",
+   "label": "AI Data Sources",
+   "options": "Raven Bot Files"
   }
  ],
  "image_field": "image",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-02 23:01:52.263158",
+ "modified": "2024-10-17 16:53:43.698958",
  "modified_by": "Administrator",
  "module": "Raven Bot",
  "name": "Raven Bot",

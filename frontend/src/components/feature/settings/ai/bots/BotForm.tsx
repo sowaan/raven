@@ -8,6 +8,7 @@ import BotFunctionsForm from './BotFunctionsForm'
 import { useFormContext } from 'react-hook-form'
 import { RavenBot } from '@/types/RavenBot/RavenBot'
 import BotDocs from './BotDocs'
+import BotFileSources from './BotFileSources'
 
 const ICON_PROPS = {
     size: 18,
@@ -25,6 +26,7 @@ const BotForm = ({ isEdit }: { isEdit: boolean }) => {
                 {isAiBot ? <Tabs.Trigger value='ai'><LuSparkles {...ICON_PROPS} /> AI</Tabs.Trigger> : null}
                 {isAiBot ? <Tabs.Trigger value='instructions'><BiFile {...ICON_PROPS} /> Instructions</Tabs.Trigger> : null}
                 {isAiBot ? <Tabs.Trigger value='functions'><LuFunctionSquare {...ICON_PROPS} /> Functions</Tabs.Trigger> : null}
+                {isEdit && isAiBot ? <Tabs.Trigger value='sources'><BiFile {...ICON_PROPS} /> Sources</Tabs.Trigger> : null}
                 {isEdit ? <Tabs.Trigger value='api-docs'><BiCode {...ICON_PROPS} /> API Docs</Tabs.Trigger> : null}
             </Tabs.List>
             <Box pt='4'>
@@ -40,10 +42,12 @@ const BotForm = ({ isEdit }: { isEdit: boolean }) => {
                 <Tabs.Content value='functions'>
                     <BotFunctionsForm />
                 </Tabs.Content>
+                <Tabs.Content value='sources'>
+                    <BotFileSources />
+                </Tabs.Content>
                 <Tabs.Content value='api-docs'>
                     <BotDocs />
                 </Tabs.Content>
-
             </Box>
         </Tabs.Root>
     )

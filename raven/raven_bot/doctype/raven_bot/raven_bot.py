@@ -20,8 +20,10 @@ class RavenBot(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from raven.raven_ai.doctype.raven_bot_files.raven_bot_files import RavenBotFiles
 		from raven.raven_ai.doctype.raven_bot_functions.raven_bot_functions import RavenBotFunctions
 
+		ai_data_sources: DF.Table[RavenBotFiles]
 		allow_bot_to_write_documents: DF.Check
 		bot_functions: DF.Table[RavenBotFunctions]
 		bot_name: DF.Data
