@@ -13,6 +13,8 @@ import useIsUserOnLeave from "@/hooks/fetchers/useIsUserOnLeave"
 import { UserContext } from "@/utils/auth/UserProvider"
 import { replaceCurrentUserFromDMChannelName } from "@/utils/operations"
 import { useIsDesktop } from "@/hooks/useMediaQuery"
+import { useAtomValue } from "jotai"
+import { lastWorkspaceAtom } from "@/utils/lastVisitedAtoms"
 
 interface DMChannelHeaderProps {
     channelData: DMChannelListItem,
@@ -52,10 +54,12 @@ export const DMChannelHeader = ({ channelData }: DMChannelHeaderProps) => {
 
     const isDesktop = useIsDesktop()
 
+    const lastWorkspace = useAtomValue(lastWorkspaceAtom)
+
     return (
         <PageHeader>
             <Flex gap='3' align='center'>
-                <Link to='/channel' className="block bg-transparent hover:bg-transparent active:bg-transparent sm:hidden">
+                <Link to={`/${lastWorkspace}`} className="block bg-transparent hover:bg-transparent active:bg-transparent sm:hidden">
                     <BiChevronLeft size='24' className="block text-gray-12" />
                 </Link>
                 <UserAvatar

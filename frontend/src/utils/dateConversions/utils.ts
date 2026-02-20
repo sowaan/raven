@@ -1,11 +1,12 @@
-import * as dayjs from 'dayjs'
+import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import advancedFormat from 'dayjs/plugin/advancedFormat'
-
+import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(advancedFormat)
+dayjs.extend(relativeTime)
 
 const DEFAULT_TIME_ZONE = 'Asia/Kolkata'
 //@ts-expect-error
@@ -27,4 +28,9 @@ export const getDateObject = (timestamp: string): dayjs.Dayjs => {
 export const convertMillisecondsToReadableDate = (timestampInMilliseconds: number, format: string = 'hh:mm A (Do MMM)') => {
 
     return dayjs.unix(timestampInMilliseconds / 1000)
+}
+
+// Convert a Date object to Frappe datetime format string
+export const convertDateToTimeString = (date: Date): string => {
+    return dayjs(date).format(FRAPPE_DATETIME_FORMAT)
 }

@@ -7,11 +7,13 @@ import { UserFields } from "./users/UserListProvider"
  */
 export const getFileExtension = (filename: string) => {
 
-    const extension = filename?.split('.').pop()?.toLocaleLowerCase() ?? ''
+    const fileNameWithoutQuery = filename?.split('?')[0]
+
+    const extension = fileNameWithoutQuery?.split('.').pop()?.toLocaleLowerCase() ?? ''
     return extension;
 }
 
-export const VIDEO_FORMATS = ['mp4', 'webm']
+export const VIDEO_FORMATS = ['mp4', 'webm', 'mov']
 /**
  * Function to check if a file is a video
  * @param extension extension of the file
@@ -30,7 +32,9 @@ export const isVideoFile = (ext: string) => {
 export const getFileName = (filename: string) => {
 
     const name = filename?.split('/')[3]
-    return name;
+
+    // Remove the query params from the filename
+    return name?.split('?')[0]
 }
 
 /**
@@ -77,25 +81,33 @@ export const getUsers = (usersList: string[], count: number, currentUser: string
 
             if (currentUserInList) {
                 const otherUsers = usersList.filter((user, index) => index !== currentUserIndex)
-
-                // Show all users upto 50
-                const userString = otherUsers.slice(0, 50).map((user) => userArray.find((u) => u.name == user)?.full_name).join(', ')
-
                 const remainingUsers = otherUsers.length - 50
                 if (remainingUsers > 0) {
+                    // Show all users upto 50
+                    const userString = otherUsers.slice(0, 50).map((user) => userArray.find((u) => u.name == user)?.full_name).join(', ')
                     return `You, ${userString} and ${remainingUsers} others`
                 } else {
-                    return `You and ${userString}`
+                    // The user string will need to have an ", and" just before the last user
+                    // For example, You, John, Jane, and Henry
+                    const numberOfUsers = otherUsers.length
+                    const userString = otherUsers.slice(0, numberOfUsers - 1).map((user) => userArray.find((u) => u.name == user)?.full_name).join(', ')
+                    const lastUser = userArray.find((u) => u.name == otherUsers[numberOfUsers - 1])?.full_name
+                    return `You, ${userString}, and ${lastUser}`
                 }
             }
             else {
-                const userString = usersList.slice(0, 50).map((user) => userArray.find((u) => u.name == user)?.full_name).join(', ')
-                const remainingUsers = usersList.length - 50
+                const numberOfUsers = usersList.length
 
-                if (remainingUsers > 0) {
+                if (numberOfUsers > 50) {
+                    const userString = usersList.slice(0, 50).map((user) => userArray.find((u) => u.name == user)?.full_name).join(', ')
+                    const remainingUsers = usersList.length - 50
                     return `${userString} and ${remainingUsers} others`
                 } else {
-                    return userString
+                    // The user string will need to have an ", and" just before the last user
+                    // For example, John, Jane, and Henry
+                    const userString = usersList.slice(0, numberOfUsers - 1).map((user) => userArray.find((u) => u.name == user)?.full_name).join(', ')
+                    const lastUser = userArray.find((u) => u.name == usersList[numberOfUsers - 1])?.full_name
+                    return `${userString} and ${lastUser}`
                 }
             }
         }

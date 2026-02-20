@@ -24,6 +24,7 @@ class RavenUser(Document):
 		enabled: DF.Check
 		first_name: DF.Data | None
 		full_name: DF.Data
+		last_mention_viewed_on: DF.Datetime | None
 		pinned_channels: DF.Table[RavenPinnedChannels]
 		type: DF.Literal["User", "Bot"]
 		user: DF.Link | None
@@ -122,14 +123,14 @@ def add_user_to_raven(doc, method):
 
 			if has_raven_role:
 				raven_user = frappe.get_doc("Raven User", {"user": doc.name})
-				if not doc.full_name:
-					raven_user.full_name = doc.first_name
+				raven_user.full_name = doc.full_name or doc.first_name
+				raven_user.first_name = doc.first_name
 				raven_user.enabled = doc.enabled
 				raven_user.save(ignore_permissions=True)
 			else:
 				raven_user = frappe.get_doc("Raven User", {"user": doc.name})
-				if not doc.full_name:
-					raven_user.full_name = doc.first_name
+				raven_user.full_name = doc.full_name or doc.first_name
+				raven_user.first_name = doc.first_name
 				raven_user.enabled = 0
 				raven_user.save(ignore_permissions=True)
 		else:
@@ -146,8 +147,8 @@ def add_user_to_raven(doc, method):
 					# Create a Raven User record for the user.
 					raven_user = frappe.new_doc("Raven User")
 					raven_user.user = doc.name
-					if not doc.full_name:
-						raven_user.full_name = doc.first_name
+					raven_user.full_name = doc.full_name or doc.first_name
+					raven_user.first_name = doc.first_name
 					raven_user.enabled = doc.enabled
 					raven_user.insert(ignore_permissions=True)
 

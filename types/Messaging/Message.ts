@@ -23,6 +23,7 @@ export interface BaseMessage {
     bot?: string,
     hide_link_preview?: 1 | 0,
     is_thread: 1 | 0,
+    is_pinned: 1 | 0,
 }
 
 export interface FileMessage extends BaseMessage {
@@ -38,6 +39,7 @@ export interface ImageMessage extends BaseMessage {
     thumbnail_width?: number,
     thumbnail_height?: number,
     image_thumbnail?: string,
+    blurhash?: string
 }
 
 export interface TextMessage extends BaseMessage {

@@ -1,7 +1,7 @@
 import { useFrappeGetCall } from 'frappe-react-sdk'
 import { Poll } from '../chat/ChatMessage/Renderers/PollMessage'
 import { useState } from 'react'
-import { Button, Dialog, Flex, Separator, Text } from '@radix-ui/themes'
+import { Button, Dialog, Flex, ScrollArea, Separator, Text } from '@radix-ui/themes'
 import { DIALOG_CONTENT_CLASS } from '@/utils/layout/dialog'
 import { ErrorBanner } from '@/components/layout/AlertBanner/ErrorBanner'
 import { UserAvatar } from '@/components/common/UserAvatar'
@@ -30,13 +30,14 @@ export const ViewPollVotes = ({ poll }: ViewPollVotesProps) => {
     }
 
     const isDesktop = useIsDesktop()
+    const buttonText = poll.poll.is_disabled ? 'View Results' : 'View Votes'
 
     if (isDesktop) {
         return (
             <Dialog.Root open={open} onOpenChange={setOpen}>
 
                 <Dialog.Trigger>
-                    <Button variant='ghost' size={'1'} className='-mb-2.5 bg-transparent hover:text-accent-10 w-full'>View Votes</Button>
+                    <Button variant='ghost' size={'1'} className='-mb-2.5 bg-transparent hover:text-accent-10 w-full'>{buttonText}</Button>
                 </Dialog.Trigger>
 
                 <Dialog.Content className={clsx(DIALOG_CONTENT_CLASS, 'max-h-[80vh]')}>
@@ -51,7 +52,7 @@ export const ViewPollVotes = ({ poll }: ViewPollVotesProps) => {
         return <Drawer open={open} onOpenChange={setOpen}>
             <Separator className='w-full' />
             <DrawerTrigger asChild>
-                <Button variant='ghost' size={'1'} className='bg-transparent hover:text-accent-10 w-full'>View Votes</Button>
+                <Button variant='ghost' size={'1'} className='bg-transparent hover:text-accent-10 w-full'>{buttonText}</Button>
             </DrawerTrigger>
             <DrawerContent>
                 <div className='h-[80vh]'>
@@ -100,32 +101,33 @@ const VotesBlock = ({ votesData, poll }: { votesData: PollVotesResponse, poll: P
             </Dialog.Title>
 
             <Separator className='w-full' />
-
-            <Flex direction={'column'} className='py-4' gap={'2'}>
-                <Text size={'3'} weight={'bold'}>{poll.poll.question}</Text>
-                {votesData && Object.keys(votesData).map((opt) => {
-                    const option = votesData[opt]
-                    const optionName = poll.poll.options.find(o => o.name === opt)?.option
-                    return (
-                        <div>
-                            <div key={opt} className='flex items-center justify-between py-2'>
-                                <Flex>
-                                    <Text size='1'>{optionName}</Text>
-                                    <Text size='1' color='gray' className='ml-1'>- {option.percentage.toFixed(2)}%</Text>
+            <ScrollArea className='h-[76vh]' type='scroll'>
+                <Flex direction={'column'} className='py-4 pr-3' gap={'2'}>
+                    <Text size={'3'} weight={'bold'}>{poll.poll.question}</Text>
+                    {votesData && Object.keys(votesData).map((opt) => {
+                        const option = votesData[opt]
+                        const optionName = poll.poll.options.find(o => o.name === opt)?.option
+                        return (
+                            <div>
+                                <div key={opt} className='flex items-center justify-between py-2'>
+                                    <Flex>
+                                        <Text size='1'>{optionName}</Text>
+                                        <Text size='1' color='gray' className='ml-1'>- {option.percentage.toFixed(2)}%</Text>
+                                    </Flex>
+                                    <Text size='1' color='gray'>{option.count} vote{option.count > 1 ? 's' : ''}</Text>
+                                </div>
+                                <Flex direction={'column'} gap={'2'} className='bg-gray-100 dark:bg-gray-3 rounded-md py-2 px-2'>
+                                    {option.users.map((user) => {
+                                        return <div key={user} className='group'>
+                                            <UserVote user_id={user} />
+                                        </div>
+                                    })}
                                 </Flex>
-                                <Text size='1' color='gray'>{option.count} vote{option.count > 1 ? 's' : ''}</Text>
                             </div>
-                            <Flex direction={'column'} gap={'2'} className='bg-gray-100 dark:bg-gray-3 rounded-md py-2 px-2'>
-                                {option.users.map((user) => {
-                                    return <div key={user} className='group'>
-                                        <UserVote user_id={user} />
-                                    </div>
-                                })}
-                            </Flex>
-                        </div>
-                    )
-                })}
-            </Flex>
+                        )
+                    })}
+                </Flex>
+            </ScrollArea>
         </Flex>
     )
 }

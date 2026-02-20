@@ -8,12 +8,17 @@ import clsx from 'clsx'
 import { useContext, useMemo } from 'react'
 import useUnreadMessageCount from '@/hooks/useUnreadMessageCount'
 import { ChannelListContext, ChannelListContextType } from '@/utils/channel/ChannelListProvider'
+import { generateAvatarColor } from '@/components/feature/selectDropdowns/GenerateAvatarColor'
+import { getInitials } from '@/components/common/UserAvatar'
+import { useSetAtom } from 'jotai'
+import { lastChannelAtom, lastWorkspaceAtom } from '@/utils/lastVisitedAtoms'
+import { useResetAtom } from 'jotai/utils'
 
 const WorkspacesSidebar = () => {
 
     const { data } = useFetchWorkspaces()
 
-    const unreadCounts = useUnreadMessageCount()
+    const { unread_count } = useUnreadMessageCount()
     const { channels } = useContext(ChannelListContext) as ChannelListContextType
 
     const myWorkspaces: (WorkspaceFields & { unread_count: number })[] = useMemo(() => {
@@ -24,8 +29,8 @@ const WorkspacesSidebar = () => {
         // Loop over all channels in the channels context and find it's unread count and add it to the workspace_unread_counts object
         channels.forEach((channel) => {
             if (channel.workspace) {
-                let unread_count = unreadCounts?.message.channels?.find((c) => c.name === channel.name)?.unread_count || 0
-                workspace_unread_counts[channel.workspace] = (workspace_unread_counts?.[channel.workspace] || 0) + unread_count
+                let unreadCounts = unread_count?.message?.find((c) => c.name === channel.name)?.unread_count || 0
+                workspace_unread_counts[channel.workspace] = (workspace_unread_counts?.[channel.workspace] || 0) + unreadCounts
             }
         })
 
@@ -37,7 +42,7 @@ const WorkspacesSidebar = () => {
         })
 
         return myWorkspacesWithUnreadCounts
-    }, [data, channels, unreadCounts])
+    }, [data, channels, unread_count])
 
     return (
         <Stack className='w-20 p-0 pb-4 border-r border-gray-4 dark:border-gray-6 h-screen' justify='between'>
@@ -72,13 +77,16 @@ const WorkspaceItem = ({ workspace }: { workspace: WorkspaceFields & { unread_co
 
     const path = isSelected ? location.pathname : `/${workspace.name}`
 
+    const setLastWorkspace = useSetAtom(lastWorkspaceAtom)
+    const resetLastChannel = useResetAtom(lastChannelAtom)
+
     const openWorkspace = () => {
-        localStorage.setItem('ravenLastWorkspace', workspace.name)
-        localStorage.removeItem('ravenLastChannel')
+        setLastWorkspace(workspace.name)
+        resetLastChannel()
     }
 
     return <HStack position='relative' align='center' className='group'>
-        <Box className={clsx('w-1 bg-gray-12 rounded-r-full dark:bg-gray-12 absolute sm:-left-3 -left-3.5 group-hover:h-4 transition-all duration-200 ease-ease-out-cubic',
+        <Box className={clsx('w-1.5 bg-gray-12 rounded-r-full dark:bg-gray-12 absolute sm:-left-3 -left-3.5 group-hover:h-4 transition-all duration-200 ease-ease-out-cubic',
             isSelected ? 'h-[90%] group-hover:h-[90%] group-active:h-[90%]' : 'group-active:h-4',
             workspace.unread_count > 0 && 'h-1.5'
         )} />
@@ -102,13 +110,23 @@ const WorkspaceItem = ({ workspace }: { workspace: WorkspaceFields & { unread_co
 }
 
 const WorkspaceLogo = ({ workspace_name, logo }: { workspace_name: string, logo: string }) => {
+
+    const { color, fallback } = useMemo(() => {
+        const fallback = getInitials(workspace_name)
+        const color = generateAvatarColor(workspace_name)
+
+        return {
+            color,
+            fallback
+        }
+    }, [workspace_name])
     return <Box>
         <Avatar
             size={{ sm: '3', md: '3' }}
             className={clsx('hover:shadow-sm transition-all duration-200')}
-            color='gray'
+            color={color}
             loading='eager'
-            fallback={workspace_name.charAt(0)}
+            fallback={fallback}
             src={logo}
         />
     </Box>

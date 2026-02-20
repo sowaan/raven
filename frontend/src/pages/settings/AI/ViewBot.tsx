@@ -1,5 +1,6 @@
 import { Loader } from "@/components/common/Loader"
 import BotForm from "@/components/feature/settings/ai/bots/BotForm"
+import CommonSettingsMenu from "@/components/feature/settings/common/CommonSettingsMenu"
 import { ErrorBanner } from "@/components/layout/AlertBanner/ErrorBanner"
 import { FullPageLoader } from "@/components/layout/Loaders/FullPageLoader"
 import PageContainer from "@/components/layout/Settings/PageContainer"
@@ -7,13 +8,15 @@ import SettingsContentContainer from "@/components/layout/Settings/SettingsConte
 import SettingsPageHeader from "@/components/layout/Settings/SettingsPageHeader"
 import { HStack } from "@/components/layout/Stack"
 import { RavenBot } from "@/types/RavenBot/RavenBot"
+import { lastWorkspaceAtom } from "@/utils/lastVisitedAtoms"
 import { isEmpty } from "@/utils/validations"
 import { Button } from "@radix-ui/themes"
 import { useFrappeGetDoc, useFrappeUpdateDoc, SWRResponse, FrappeContext, FrappeConfig } from "frappe-react-sdk"
-import { useContext } from "react"
+import { useAtomValue } from "jotai"
+import { useContext, useEffect } from "react"
 import { FormProvider, useForm } from "react-hook-form"
 import { FiExternalLink } from "react-icons/fi"
-import { useNavigate, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 type Props = {}
@@ -56,6 +59,19 @@ const ViewBotContent = ({ data, mutate }: { data: RavenBot, mutate: SWRResponse[
             })
     }
 
+    useEffect(() => {
+
+        const down = (e: KeyboardEvent) => {
+            if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                methods.handleSubmit(onSubmit)()
+            }
+        }
+
+        document.addEventListener('keydown', down)
+        return () => document.removeEventListener('keydown', down)
+    }, [])
+
 
 
     return <form onSubmit={methods.handleSubmit(onSubmit)}>
@@ -65,13 +81,14 @@ const ViewBotContent = ({ data, mutate }: { data: RavenBot, mutate: SWRResponse[
                     title={data.bot_name}
                     headerBadges={isDirty ? [{ label: "Not Saved", color: "red" }] : undefined}
                     actions={<HStack>
+                        <CommonSettingsMenu doctype="Raven Bot" docname={data.name} label={"Agent"} />
                         <OpenChatButton bot={data} />
                         <Button type='submit' disabled={loading}>
                             {loading && <Loader className="text-white" />}
                             {loading ? "Saving" : "Save"}
                         </Button>
                     </HStack>}
-                    breadcrumbs={[{ label: 'Bots', href: '../' }, { label: data.name, href: '', copyToClipboard: true }]}
+                    breadcrumbs={[{ label: 'Agents', href: '../' }, { label: data.name, href: '', copyToClipboard: true }]}
                 />
                 <ErrorBanner error={error} />
                 <BotForm isEdit={true} />
@@ -85,19 +102,27 @@ const OpenChatButton = ({ bot }: { bot: RavenBot }) => {
 
     const { call } = useContext(FrappeContext) as FrappeConfig
 
-    const navigate = useNavigate()
-
-    const currentWorkspace = localStorage.getItem('ravenLastWorkspace')
+    const currentWorkspace = useAtomValue(lastWorkspaceAtom)
 
     const openChat = () => {
         call.post("raven.api.raven_channel.create_direct_message_channel", {
             user_id: bot.raven_user
         }).then((res) => {
-            if (currentWorkspace) {
-                navigate(`/${currentWorkspace}/${res.message}`)
-            } else {
-                navigate(`/channel/${res.message}`)
+            const chatPath = currentWorkspace
+                ? `/${currentWorkspace}/${res.message}`
+                : `/channel/${res.message}`
+
+            let basePath = `${import.meta.env.VITE_BASE_NAME}`
+            if (!window.location.origin.endsWith("/")) {
+                basePath = "/" + basePath
             }
+
+            const fullUrl = `${window.location.origin}${basePath}${chatPath}`
+
+            window.open(fullUrl, '_blank')
+        }).catch((error) => {
+            toast.error('Failed to create chat channel')
+            console.error(error)
         })
     }
 

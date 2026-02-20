@@ -10,7 +10,7 @@ import { DateMonthYear } from "@/utils/dateConversions"
 
 type MessageBoxProps = {
     message: Message & { workspace?: string }
-    handleScrollToMessage: (messageName: string, channelID: string, workspace?: string) => void
+    handleScrollToMessage?: (messageName: string, channelID: string, workspace?: string) => void
 }
 
 export const MessageBox = ({ message, handleScrollToMessage }: MessageBoxProps) => {
@@ -18,7 +18,7 @@ export const MessageBox = ({ message, handleScrollToMessage }: MessageBoxProps) 
     const { owner, creation, channel_id } = message
     const users = useGetUserRecords()
 
-    const user = useGetUser(owner)
+    const user = useGetUser(message.is_bot_message && message.bot ? message.bot : message.owner)
     const { channel } = useCurrentChannelData(channel_id)
     const channelData = channel?.channelData
 
@@ -44,15 +44,15 @@ export const MessageBox = ({ message, handleScrollToMessage }: MessageBoxProps) 
                 <Separator orientation='vertical' />
                 <Text as='span' size='1' color='gray'><DateMonthYear date={creation} /></Text>
 
-                <Link size='1' className="invisible group-hover:visible cursor-pointer" onClick={() => handleScrollToMessage(message.name, channel_id, message.workspace)}>
+                {handleScrollToMessage ? <Link size='1' className="invisible group-hover:visible cursor-pointer" onClick={() => handleScrollToMessage(message.name, channel_id, message.workspace)}>
                     View in channel
-                </Link>
+                </Link> : null}
             </Flex>
 
             <Flex gap='3'>
                 <MessageSenderAvatar userID={owner} user={user} isActive={false} />
-                <Flex direction='column' gap='1' justify='center'>
-                    <Box mt='-1'>
+                <Flex direction='column' gap='0' justify='center'>
+                    <Box>
                         <UserHoverCard user={user} userID={owner} isActive={false} />
                     </Box>
                     <MessageContent message={message} user={user} />

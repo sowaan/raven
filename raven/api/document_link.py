@@ -1,6 +1,6 @@
 import frappe
 from frappe.desk.utils import slug
-from frappe.model.meta import no_value_fields, table_fields
+from frappe.model import no_value_fields, table_fields
 from frappe.utils import get_url
 
 
@@ -17,7 +17,7 @@ def get_new_app_document_links(doctype, docname):
 
 
 @frappe.whitelist(methods=["GET"])
-def get(doctype, docname, with_site_url=True):
+def get(doctype: str, docname: str | int, with_site_url: bool = True):
 
 	document_link_override = frappe.get_hooks("raven_document_link_override")
 	if document_link_override and len(document_link_override) > 0:
@@ -37,7 +37,7 @@ def get(doctype, docname, with_site_url=True):
 
 
 @frappe.whitelist(methods=["GET"])
-def get_preview_data(doctype, docname):
+def get_preview_data(doctype: str, docname: str | int):
 	preview_fields = []
 	meta = frappe.get_meta(doctype)
 
@@ -73,6 +73,7 @@ def get_preview_data(doctype, docname):
 		"preview_image": preview_data.get(image_field),
 		"preview_title": preview_data.get(title_field),
 		"id": preview_data.get("name"),
+		"raven_document_link": get(doctype, docname),
 	}
 
 	for key, val in preview_data.items():
@@ -84,3 +85,66 @@ def get_preview_data(doctype, docname):
 			)
 
 	return formatted_preview_data
+
+
+@frappe.whitelist(methods=["POST"])
+def update_preview_fields(doctype: str, fields: list[str]):
+
+	meta = frappe.get_meta(doctype)
+
+	existing_preview_fields = [
+		field.fieldname
+		for field in meta.fields
+		if field.in_preview
+		and field.fieldtype not in no_value_fields
+		and field.fieldtype not in table_fields
+	]
+	fields_to_remove = set(existing_preview_fields) - set(fields)
+
+	for field in fields_to_remove:
+		delete_property_setter(doctype, field_name=field, property="in_preview")
+
+	for field in fields:
+		meta_df = meta.get_field(field)
+		if not meta_df:
+			continue
+
+		delete_property_setter(doctype, field_name=field, property="in_preview")
+
+		# Check if a property setter needs to be created for this field - if the field was already in preview, we don't need to do anything
+		is_in_preview_by_default = frappe.db.get_value(
+			"DocField", {"parent": doctype, "fieldname": field}, "in_preview"
+		)
+
+		if is_in_preview_by_default:
+			# No need to create a property setter
+			continue
+
+		# create a new property setter
+		frappe.make_property_setter(
+			{
+				"doctype": doctype,
+				"doctype_or_field": "DocField",
+				"fieldname": field,
+				"property": "in_preview",
+				"value": "1",
+				"property_type": "Check",
+			},
+			is_system_generated=False,
+		)
+
+
+def delete_property_setter(doc_type, property=None, field_name=None, row_name=None):
+	"""delete other property setters on this, if this is new"""
+	filters = {"doc_type": doc_type}
+	if property:
+		filters["property"] = property
+
+	if field_name:
+		filters["field_name"] = field_name
+	if row_name:
+		filters["row_name"] = row_name
+
+	property_setters = frappe.db.get_values("Property Setter", filters)
+	for ps in property_setters:
+		frappe.get_doc("Property Setter", ps).delete(force=True)

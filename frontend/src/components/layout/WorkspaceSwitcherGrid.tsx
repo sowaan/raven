@@ -3,10 +3,13 @@ import { Avatar, Card, Grid, Heading, Text } from '@radix-ui/themes'
 import { Link } from 'react-router-dom'
 import { HStack, Stack } from './Stack'
 import { useMemo } from 'react'
-import { useFrappeGetDocCount, useFrappePostCall, useSWRConfig } from 'frappe-react-sdk'
+import { useFrappeGetCall, useFrappePostCall, useSWRConfig } from 'frappe-react-sdk'
 import { MdArrowOutward } from 'react-icons/md'
 import { toast } from 'sonner'
 import { getErrorMessage } from './AlertBanner/ErrorBanner'
+import { useSetAtom } from 'jotai'
+import { lastChannelAtom, lastWorkspaceAtom } from '@/utils/lastVisitedAtoms'
+import { useResetAtom } from 'jotai/utils'
 
 const WorkspaceSwitcherGrid = () => {
 
@@ -71,21 +74,21 @@ const WorkspaceSwitcherGrid = () => {
 }
 
 const WorkspaceMemberCount = ({ workspace }: { workspace: string }) => {
-    const { data } = useFrappeGetDocCount('Raven Workspace Member', [['workspace', '=', workspace]], true)
+    const { data } = useFrappeGetCall('raven.api.workspaces.get_workspace_member_count', { workspace })
 
     if (data === undefined) {
         return null
     }
 
-    if (data === 0) {
+    if (data.message === 0) {
         return <Text size='2' as='span' color='gray' weight='medium'>No members</Text>
     }
 
-    if (data === 1) {
+    if (data.message === 1) {
         return <Text size='2' as='span' color='gray' weight='medium'>1 solo member</Text>
     }
 
-    return <Text size='2' as='span' color='gray' weight='medium'>{data} members</Text>
+    return <Text size='2' as='span' color='gray' weight='medium'>{data.message} members</Text>
 }
 
 const getLogo = (workspace: WorkspaceFields) => {
@@ -101,9 +104,12 @@ const getLogo = (workspace: WorkspaceFields) => {
 const MyWorkspaceItem = ({ workspace }: { workspace: WorkspaceFields }) => {
     const logo = getLogo(workspace)
 
+    const setLastWorkspace = useSetAtom(lastWorkspaceAtom)
+    const resetLastChannel = useResetAtom(lastChannelAtom)
+
     const openWorkspace = () => {
-        localStorage.setItem('ravenLastWorkspace', workspace.name)
-        localStorage.removeItem('ravenLastChannel')
+        setLastWorkspace(workspace.name)
+        resetLastChannel()
     }
 
     return <Card asChild className='shadow-sm hover:scale-105 transition-all duration-200'>

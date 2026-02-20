@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from raven.utils import delete_channel_members_cache, is_channel_member
+from raven.utils import delete_channel_members_cache, get_raven_room
 
 
 class RavenChannel(Document):
@@ -17,8 +17,12 @@ class RavenChannel(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from raven.raven.doctype.raven_pinned_messages.raven_pinned_messages import RavenPinnedMessages
+
 		channel_description: DF.SmallText | None
 		channel_name: DF.Data
+		dm_user_1: DF.Link | None
+		dm_user_2: DF.Link | None
 		is_ai_thread: DF.Check
 		is_archived: DF.Check
 		is_direct_message: DF.Check
@@ -31,6 +35,8 @@ class RavenChannel(Document):
 		linked_doctype: DF.Link | None
 		linked_document: DF.DynamicLink | None
 		openai_thread_id: DF.Data | None
+		pinned_messages: DF.Table[RavenPinnedMessages]
+		pinned_messages_string: DF.SmallText | None
 		thread_bot: DF.Link | None
 		type: DF.Literal["Private", "Public", "Open"]
 		workspace: DF.Link | None
@@ -51,6 +57,17 @@ class RavenChannel(Document):
 
 		delete_channel_members_cache(self.name)
 
+		if not self.is_thread:
+			# Update the channel list for all users
+			frappe.publish_realtime(
+				"channel_list_updated",
+				{
+					"channel_id": self.name,
+				},
+				room=get_raven_room(),
+				after_commit=True,
+			)
+
 		# If the channel was a thread, (i.e. a message exists with the same name), remove the 'is_thread' flag from the message
 		if self.is_thread and frappe.db.exists("Raven Message", {"name": self.name}):
 			message_channel_id = frappe.get_cached_value("Raven Message", self.name, "channel_id")
@@ -70,6 +87,18 @@ class RavenChannel(Document):
 				docname=message_channel_id,
 			)
 
+	def on_update(self):
+		if not self.is_thread:
+			# Update the channel list for all users
+			frappe.publish_realtime(
+				"channel_list_updated",
+				{
+					"channel_id": self.name,
+				},
+				room=get_raven_room(),
+				after_commit=True,
+			)
+
 	def after_insert(self):
 		"""
 		After inserting a channel, we need to check if it is a direct message channel or not.
@@ -83,6 +112,17 @@ class RavenChannel(Document):
 		"""
 		# add current user as channel member
 		if not frappe.flags.in_install and not self.flags.do_not_add_member:
+
+			if self.type in ("Open", "Public") and not self.is_thread:
+				# Update the channel list for all users
+				frappe.publish_realtime(
+					"channel_list_updated",
+					{
+						"channel_id": self.name,
+					},
+					room=get_raven_room(),
+					after_commit=True,
+				)
 
 			if self.is_direct_message == 1:
 				# Add both users as members
@@ -123,6 +163,10 @@ class RavenChannel(Document):
 				{"channel_id": self.name, "user_id": frappe.session.user, "is_admin": 1},
 			):
 				pass
+			elif "Raven Admin" in frappe.get_roles() and frappe.db.get_value(
+				"Raven Channel Member", {"channel_id": self.name, "user_id": frappe.session.user}
+			):
+				pass
 			elif frappe.session.user == "Administrator":
 				pass
 			else:
@@ -161,6 +205,16 @@ class RavenChannel(Document):
 
 		if self.is_direct_message == 1:
 			self.type = "Private"
+			users = self.channel_name.split(" _ ")
+			if len(users) == 2:
+				# Canonical order - user1 > user_2(alphabetically)
+				if users[0] > users[1]:
+					self.dm_user_1, self.dm_user_2 = users[0], users[1]
+				else:
+					self.dm_user_1, self.dm_user_2 = users[1], users[0]
+			else:
+				self.dm_user_1 = self.dm_user_2 = users[0]
+
 		if self.is_direct_message == 0:
 			self.channel_name = self.channel_name.strip().lower().replace(" ", "-")
 
@@ -168,6 +222,11 @@ class RavenChannel(Document):
 			workspaces = frappe.get_all("Raven Workspace")
 			if len(workspaces) == 1:
 				self.workspace = workspaces[0].name
+
+		self.set_pinned_messages_string()
+
+	def set_pinned_messages_string(self):
+		self.pinned_messages_string = "\n".join([message.message_id for message in self.pinned_messages])
 
 	def add_members(self, members, is_admin=0):
 		# members is a list of Raven User IDs
@@ -195,3 +254,15 @@ class RavenChannel(Document):
 			self.name = self.workspace + "-" + self.channel_name.strip().lower().replace(" ", "-")
 		elif self.is_thread:
 			self.name = self.channel_name
+
+
+def on_doctype_update():
+	"""
+	Add unique constraint on dm_user_1 and dm_user_2 to prevent duplicate DM channels.
+	NULL values are ignored by MySQL/MariaDB unique constraints, so this only affects DM channels.
+	"""
+	frappe.db.add_unique(
+		"Raven Channel",
+		fields=["dm_user_1", "dm_user_2"],
+		constraint_name="unique_dm_channel",
+	)

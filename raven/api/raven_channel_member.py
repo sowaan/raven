@@ -5,7 +5,7 @@ from raven.utils import delete_channel_members_cache, get_channel_member, track_
 
 
 @frappe.whitelist()
-def remove_channel_member(user_id, channel_id):
+def remove_channel_member(user_id: str, channel_id: str):
 	# Get raven channel member name where user_id and channel_id match
 	member = get_channel_member(channel_id, user_id)
 	# Delete raven channel member
@@ -18,7 +18,7 @@ def remove_channel_member(user_id, channel_id):
 
 
 @frappe.whitelist(methods=["POST"])
-def track_visit(channel_id):
+def track_visit(channel_id: str):
 	"""
 	Track the last visit of the user to the channel.
 	This is usually called when the user exits the channel (unmounts the component) after loading the latest messages in it.
@@ -32,7 +32,6 @@ def add_channel_members(channel_id: str, members: list[str]):
 	"""
 	Add members to a channel
 	"""
-	frappe.has_permission("Raven Channel", doc=channel_id, ptype="write", throw=True)
 
 	# Since this is a bulk operation, we need to disable cache invalidation (will be handled manually) and ignore permissions (since we already have permission to add members)
 
@@ -41,7 +40,10 @@ def add_channel_members(channel_id: str, members: list[str]):
 			{"doctype": "Raven Channel Member", "channel_id": channel_id, "user_id": member}
 		)
 		member_doc.flags.ignore_cache_invalidation = True
-		member_doc.insert(ignore_permissions=True)
+		member_doc.insert()
+
+	if not members:
+		return True
 
 	delete_channel_members_cache(channel_id)
 	return True

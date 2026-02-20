@@ -7,6 +7,9 @@ import { AlertDialog, Button, Callout, Checkbox, Dialog, Flex, Text } from '@rad
 import { Loader } from '@/components/common/Loader'
 import { FiAlertTriangle } from 'react-icons/fi'
 import { toast } from 'sonner'
+import { useAtomValue } from 'jotai'
+import { lastChannelAtom, lastWorkspaceAtom } from '@/utils/lastVisitedAtoms'
+import { useResetAtom } from 'jotai/utils'
 
 type DeleteChannelModalProps = {
     onClose: () => void,
@@ -28,6 +31,9 @@ export const DeleteChannelModal = ({ onClose, onCloseParent, isDrawer, channelDa
 
     const navigate = useNavigate()
 
+    const lastWorkspace = useAtomValue(lastWorkspaceAtom)
+    const resetLastChannel = useResetAtom(lastChannelAtom)
+
     const onSubmit = () => {
         if (channelData?.name) {
             deleteDoc('Raven Channel', channelData.name)
@@ -36,9 +42,13 @@ export const DeleteChannelModal = ({ onClose, onCloseParent, isDrawer, channelDa
                     mutate(["channel_members", channelData.name], undefined, { revalidate: false })
                     onClose()
                     onCloseParent()
-                    localStorage.removeItem('ravenLastChannel')
-                    navigate('/channel')
-                    toast(`Channel ${channelData.name} deleted.`)
+                    resetLastChannel()
+                    if (lastWorkspace) {
+                        navigate(`/${lastWorkspace}`)
+                    } else {
+                        navigate('/')
+                    }
+                    toast(`Channel ${channelData.channel_name} deleted.`)
                 })
         }
     }

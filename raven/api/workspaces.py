@@ -83,6 +83,18 @@ def is_workspace_admin(workspace: str):
 
 
 @frappe.whitelist()
+def can_create_channel(workspace: str):
+	"""
+	Checks if the current user can create a channel in a workspace
+	"""
+	workspace_doc = frappe.get_doc("Raven Workspace", workspace)
+	if workspace_doc.only_admins_can_create_channels:
+		return is_workspace_admin(workspace)
+
+	return True
+
+
+@frappe.whitelist()
 def fetch_workspace_members(workspace: str):
 	"""
 	Gets all members of a workspace
@@ -93,6 +105,15 @@ def fetch_workspace_members(workspace: str):
 		filters={"workspace": workspace},
 		fields=["user", "is_admin", "creation", "name"],
 	)
+
+
+@frappe.whitelist()
+def get_workspace_member_count(workspace: str):
+	"""
+	Gets the number of members in a workspace
+	"""
+	frappe.has_permission("Raven Workspace", doc=workspace, throw=True)
+	return frappe.db.count("Raven Workspace Member", filters={"workspace": workspace})
 
 
 @frappe.whitelist()

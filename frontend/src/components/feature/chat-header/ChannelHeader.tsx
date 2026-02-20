@@ -7,6 +7,9 @@ import ChannelHeaderMenu from "./ChannelHeaderMenu"
 import { ViewChannelMemberAvatars } from "./ViewChannelMemberAvatars"
 import { BiChevronLeft } from "react-icons/bi"
 import { Link } from "react-router-dom"
+import { ViewPinnedMessagesButton } from "../pinned-messages/ViewPinnedMessagesButton"
+import { useAtomValue } from "jotai"
+import { lastWorkspaceAtom } from "@/utils/lastVisitedAtoms"
 
 interface ChannelHeaderProps {
     channelData: ChannelListItem
@@ -16,7 +19,7 @@ export const ChannelHeader = ({ channelData }: ChannelHeaderProps) => {
 
     // The channel header has the channel name, the channel type icon, edit channel name button, and the view or add members button
 
-    const lastWorkspace = localStorage.getItem('ravenLastWorkspace')
+    const lastWorkspace = useAtomValue(lastWorkspaceAtom)
 
     return (
         <PageHeader>
@@ -34,7 +37,8 @@ export const ChannelHeader = ({ channelData }: ChannelHeaderProps) => {
                             }}
                             className="mb-0.5 text-ellipsis line-clamp-1">{channelData.channel_name}</Heading>
                     </Flex>
-                    <EditChannelNameButton channelID={channelData.name} channel_name={channelData.channel_name} channelType={channelData.type} disabled={channelData.is_archived == 1} />
+                    <EditChannelNameButton channelID={channelData.name} channel_name={channelData.channel_name} channelType={channelData.type} disabled={channelData.is_archived == 1} buttonVisible={!!channelData.pinned_messages_string} />
+                    <ViewPinnedMessagesButton pinnedMessagesString={channelData.pinned_messages_string ?? ''} />
                 </Flex>
             </Flex>
 

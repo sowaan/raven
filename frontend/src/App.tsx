@@ -12,22 +12,53 @@ import Cookies from 'js-cookie'
 import ErrorPage from './pages/ErrorPage'
 import WorkspaceSwitcher from './pages/WorkspaceSwitcher'
 import WorkspaceSwitcherGrid from './components/layout/WorkspaceSwitcherGrid'
+import { init } from 'emoji-mart'
+import AppUpdateProvider from './utils/AppUpdateProvider'
 
 /** Following keys will not be cached in app cache */
-const NO_CACHE_KEYS = [
-  "frappe.desk.form.load.getdoctype",
-  "frappe.desk.search.search_link",
-  "frappe.model.workflow.get_transitions",
-  "frappe.desk.reportview.get_count",
-  "frappe.core.doctype.server_script.server_script.enabled",
-  "raven.api.message_actions.get_action_defaults",
-  "raven.api.document_link.get_preview_data"
+// const NO_CACHE_KEYS = [
+//   "frappe.desk.form.load.getdoctype",
+//   "frappe.desk.search.search_link",
+//   "frappe.model.workflow.get_transitions",
+//   "frappe.desk.reportview.get_count",
+//   "frappe.core.doctype.server_script.server_script.enabled",
+//   "raven.api.message_actions.get_action_defaults",
+//   "raven.api.document_link.get_preview_data"
+// ]
+
+const CACHE_KEYS = [
+  "raven.api.login.get_context",
+  "workspaces_list",
+  "raven.api.raven_users.get_list",
+  "channel_list",
 ]
 
 const isDesktop = window.innerWidth > 768
 
-const lastWorkspace = localStorage.getItem('ravenLastWorkspace') ?? ''
-const lastChannel = localStorage.getItem('ravenLastChannel') ?? ''
+let lastWorkspace = ""
+let lastChannel = ""
+
+try {
+  lastWorkspace = JSON.parse(localStorage.getItem('ravenLastWorkspace') ?? '""') ?? ''
+  lastChannel = JSON.parse(localStorage.getItem('ravenLastChannel') ?? '""') ?? ''
+}
+catch {
+
+}
+
+console.log("Last workspace", lastWorkspace)
+
+// Initialize emoji-mart
+init({
+  data: async () => {
+    const response = await fetch(
+      'https://cdn.jsdelivr.net/npm/@emoji-mart/data/sets/14/apple.json',
+    )
+
+    return response.json()
+  },
+  set: 'apple',
+})
 
 
 const router = createBrowserRouter(
@@ -46,12 +77,15 @@ const router = createBrowserRouter(
             <Route path="profile" lazy={() => import('./components/feature/userSettings/UserProfile/UserProfile')} />
             <Route path="users" lazy={() => import('./pages/settings/Users/UserList')} />
             <Route path="appearance" lazy={() => import('./pages/settings/Appearance')} />
+            <Route path="preferences" lazy={() => import('./pages/settings/Preferences')} />
             <Route path="hr" lazy={() => import('./pages/settings/Integrations/FrappeHR')} />
-
+            <Route path="document-previews" lazy={() => import('./pages/settings/Integrations/DocumentPreviewTool')} />
             <Route path="workspaces" >
               <Route index lazy={() => import('./pages/settings/Workspaces/WorkspaceList')} />
               <Route path=":ID" lazy={() => import('./pages/settings/Workspaces/ViewWorkspace')} />
             </Route>
+
+            <Route path="emojis" lazy={() => import('./pages/settings/CustomEmojis/CustomEmojiList')} />
 
             <Route path="bots" >
               <Route index lazy={() => import('./pages/settings/AI/BotList')} />
@@ -65,6 +99,12 @@ const router = createBrowserRouter(
               <Route path=":ID" lazy={() => import('./pages/settings/AI/ViewFunction')} />
             </Route>
 
+            <Route path="document-notifications">
+              <Route index lazy={() => import('./pages/settings/DocumentNotifications/DocumentNotificationList')} />
+              <Route path="create" lazy={() => import('./pages/settings/DocumentNotifications/CreateDocumentNotification')} />
+              <Route path=":ID" lazy={() => import('./pages/settings/DocumentNotifications/ViewDocumentNotification')} />
+            </Route>
+
 
             <Route path="instructions">
               <Route index lazy={() => import('./pages/settings/AI/InstructionTemplateList')} />
@@ -72,13 +112,20 @@ const router = createBrowserRouter(
               <Route path=":ID" lazy={() => import('./pages/settings/AI/ViewInstructionTemplate')} />
             </Route>
 
+            <Route path="document-processors">
+              <Route index lazy={() => import('./pages/settings/AI/DocumentProcessors')} />
+            </Route>
+
+            <Route path="file-sources" lazy={() => import('./pages/settings/AI/FileSourcesList')} />
+
             <Route path="commands">
               <Route index lazy={() => import('./pages/settings/AI/SavedPromptsList')} />
               <Route path="create" lazy={() => import('./pages/settings/AI/CreateSavedPrompt')} />
               <Route path=":ID" lazy={() => import('./pages/settings/AI/ViewSavedPrompt')} />
             </Route>
 
-            <Route path="openai-settings" lazy={() => import('./pages/settings/AI/OpenAISettings')} />
+            <Route path="ai-settings" lazy={() => import('./pages/settings/AI/AISettings')} />
+            <Route path="openai-settings" lazy={() => import('./pages/settings/AI/AISettings')} /> {/* Redirect for backwards compatibility */}
 
             <Route path="webhooks">
               <Route index lazy={() => import('./pages/settings/Webhooks/WebhookList')} />
@@ -97,13 +144,14 @@ const router = createBrowserRouter(
               <Route path="create" lazy={() => import('./pages/settings/MessageActions/CreateMessageAction')} />
               <Route path=":ID" lazy={() => import('./pages/settings/MessageActions/ViewMessageAction')} />
             </Route>
-
+            <Route path="mobile-app" lazy={() => import('./pages/settings/MobileApp')} />
+            <Route path="push-notifications" lazy={() => import('./pages/settings/PushNotifications')} />
             <Route path="help" lazy={() => import('./pages/settings/HelpAndSupport')} />
           </Route>
           <Route path=":workspaceID" element={<MainPage />}>
             <Route index element={<MobileTabsPage />} />
             <Route path="threads" lazy={() => import('./components/feature/threads/Threads')}>
-              <Route path="thread/:threadID" lazy={() => import('./components/feature/threads/ThreadDrawer/ThreadDrawer')} />
+              <Route path=":threadID" lazy={() => import('./components/feature/threads/ThreadManager/ViewThread')} />
             </Route>
             <Route path="saved-messages" lazy={() => import('./components/feature/saved-messages/SavedMessages')} />
 
@@ -144,6 +192,7 @@ function App() {
       //@ts-ignore
       swrConfig={{
         errorRetryCount: 2,
+        provider: localStorageProvider
       }}
       siteName={getSiteName()}
     >
@@ -156,6 +205,7 @@ function App() {
           panelBackground='translucent'
           setAppearance={setAppearance}>
           <RouterProvider router={router} />
+          <AppUpdateProvider />
         </ThemeProvider>
       </UserProvider>
     </FrappeProvider>
@@ -192,18 +242,17 @@ function localStorageProvider() {
       for (const [key, value] of entries) {
 
         let hasCacheKey = false
-        for (const cacheKey of NO_CACHE_KEYS) {
+        for (const cacheKey of CACHE_KEYS) {
           if (key.includes(cacheKey)) {
             hasCacheKey = true
             break
           }
         }
 
-        //Do not cache doctype meta and search link
+        // Cache only the keys that are in CACHE_KEYS
         if (hasCacheKey) {
-          continue
+          cacheEntries.push([key, value])
         }
-        cacheEntries.push([key, value])
       }
       const appCache = JSON.stringify(cacheEntries)
       localStorage.setItem('app-cache', appCache)

@@ -22,8 +22,13 @@ def check_app_permission():
 def raven_user_has_permission(doc, user=None, ptype=None):
 
 	if doc.type == "Bot":
-		# Anyone with Raven User role can change the bot details
-		if user != "Guest":
+		# Anyone with Raven User role can view the bot details
+		if ptype == "read":
+			return True
+
+		# Raven Admins can change the bot details
+		roles = frappe.get_roles(user)
+		if "Raven Admin" in roles:
 			return True
 	else:
 		# Only the user can change their own details
@@ -120,15 +125,20 @@ def channel_has_permission(doc, user=None, ptype=None):
 
 		if ptype == "create":
 			# Users can create threads in channels they are a member of the main channel in which the thread is created
-			main_channel = frappe.db.get_value("Raven Message", doc.channel_name, "channel_id")
+			main_channel = frappe.get_cached_value("Raven Message", doc.channel_name, "channel_id")
 
 			if is_channel_member(main_channel, user):
 				return True
 
 		if ptype == "read":
-			main_channel = frappe.db.get_value("Raven Message", doc.channel_name, "channel_id")
-			# Check if the user is a member of the main channel
-			return is_channel_member(main_channel, user)
+			main_channel = frappe.get_cached_value("Raven Message", doc.channel_name, "channel_id")
+			# Check if the user has read permission to the main channel
+			channel_doc = frappe.get_cached_doc("Raven Channel", main_channel)
+			return channel_doc.has_permission("read", user=user)
+
+		if ptype == "delete":
+			# Only the creator of the thread can delete the thread
+			return doc.owner == user
 
 	else:
 		# For regular channels
@@ -137,12 +147,20 @@ def channel_has_permission(doc, user=None, ptype=None):
 			workspace_member = get_workspace_member(doc.workspace, user)
 			if workspace_member and workspace_member.get("is_admin"):
 				return True
+			# If the workspace allows any member to create a channel, then the user can create a channel
+			if not frappe.db.get_value("Raven Workspace", doc.workspace, "only_admins_can_create_channels"):
+				return True
 
 		if ptype == "delete" or ptype == "write":
 			# Only channel admins can update or delete a channel
 			channel_member = get_channel_member(doc.name, user)
-			if channel_member and channel_member.get("is_admin"):
-				return True
+			if channel_member:
+				if channel_member.get("is_admin"):
+					return True
+				# If the user is a Raven Admin, they can update or delete the channel
+				roles = frappe.get_roles(user)
+				if "Raven Admin" in roles:
+					return True
 
 		if ptype == "read":
 			# Check if the channel type is public or open
@@ -235,8 +253,13 @@ def channel_member_has_permission(doc, user=None, ptype=None):
 	if ptype == "write":
 		# Only channel admins can update a channel member
 		channel_member = get_channel_member(doc.channel_id, user)
-		if channel_member and channel_member.get("is_admin"):
-			return True
+		if channel_member:
+			if channel_member.get("is_admin"):
+				return True
+			# If the user is a Raven Admin, they can update the channel member
+			roles = frappe.get_roles(user)
+			if "Raven Admin" in roles:
+				return True
 
 	# Allow self to modify their own channel member document
 	# if doc.user_id == user:
@@ -261,15 +284,16 @@ def message_has_permission(doc, user=None, ptype=None):
 
 	# To send any message, the user needs to be a member of the channel
 
-	channel_member = get_channel_member(doc.channel_id, user)
-	if not channel_member:
-		return False
-
 	if ptype == "read":
-		return True
+		channel_doc = frappe.get_cached_doc("Raven Channel", doc.channel_id)
+		return channel_has_permission(channel_doc, user, ptype)
 
 	# To create, update, or delete a message, the user needs to own this message
 	if ptype in ["create", "write", "delete"]:
+		channel_member = get_channel_member(doc.channel_id, user)
+		if not channel_member:
+			return False
+
 		return doc.owner == user
 
 	return False
@@ -283,16 +307,22 @@ def raven_poll_vote_has_permission(doc, user=None, ptype=None):
 	if not frappe.has_permission("Raven Poll", doc=doc.poll_id, ptype="read", user=user):
 		return False
 
-	if ptype in ["read", "create", "delete"]:
+	if ptype == "create":
+		# User can only vote if they are a member of the channel
+		channel_id = frappe.get_cached_value("Raven Message", {"poll_id": doc.poll_id}, "channel_id")
+		if is_channel_member(channel_id):
+			if doc.owner == user:
+				return True
+			else:
+				return False
+
+	if ptype in ["read", "delete"]:
 		if doc.owner == user:
 			return True
 		else:
 			is_anonymous = frappe.get_cached_value("Raven Poll", doc.poll_id, "is_anonymous")
 			if not is_anonymous:
 				if ptype == "read":
-					return True
-			else:
-				if ptype == "create":
 					return True
 
 	return False
@@ -314,6 +344,47 @@ def raven_poll_has_permission(doc, user=None, ptype=None):
 			return True
 
 	return False
+
+
+def raven_workspace_query(user):
+	if not user:
+		user = frappe.session.user
+
+	# Get all workspaces that the user is a member of
+	workspace_members = frappe.get_all(
+		"Raven Workspace Member", filters={"user": user}, fields=["workspace"]
+	)
+
+	workspace_names = [frappe.db.escape(member.workspace) for member in workspace_members]
+
+	if workspace_names:
+		return f"`tabRaven Workspace`.name in ({', '.join(workspace_names)}) OR `tabRaven Workspace`.type = 'Public'"
+	else:
+		return "`tabRaven Workspace`.type = 'Public'"
+
+
+def raven_workspace_member_query(user):
+	if not user:
+		user = frappe.session.user
+
+	# Get all workspaces that the user is a member of
+	workspace_members = frappe.get_all(
+		"Raven Workspace Member", filters={"user": user}, fields=["workspace"]
+	)
+
+	workspace_names = [frappe.db.escape(member.workspace) for member in workspace_members]
+
+	if workspace_names:
+		return f"`tabRaven Workspace Member`.workspace in ({', '.join(workspace_names)})"
+	else:
+		return f"`tabRaven Workspace Member`.owner = {frappe.db.escape(user)}"
+
+
+def raven_channel_member_query(user):
+	if not user:
+		user = frappe.session.user
+
+	return f"`tabRaven Channel Member`.user_id = {frappe.db.escape(user)}"
 
 
 def raven_channel_query(user):

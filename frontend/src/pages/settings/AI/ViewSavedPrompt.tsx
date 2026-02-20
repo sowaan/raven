@@ -1,14 +1,17 @@
 import { Loader } from "@/components/common/Loader"
 import SavedPromptForm from "@/components/feature/settings/ai/SavedPromptForm"
+import CommonSettingsMenu from "@/components/feature/settings/common/CommonSettingsMenu"
 import { ErrorBanner } from "@/components/layout/AlertBanner/ErrorBanner"
 import { FullPageLoader } from "@/components/layout/Loaders/FullPageLoader"
 import PageContainer from "@/components/layout/Settings/PageContainer"
 import SettingsContentContainer from "@/components/layout/Settings/SettingsContentContainer"
 import SettingsPageHeader from "@/components/layout/Settings/SettingsPageHeader"
+import { HStack } from "@/components/layout/Stack"
 import { RavenBotAIPrompt } from "@/types/RavenAI/RavenBotAIPrompt"
 import { isEmpty } from "@/utils/validations"
 import { Button } from "@radix-ui/themes"
 import { SWRResponse, useFrappeGetDoc, useFrappeUpdateDoc } from "frappe-react-sdk"
+import { useEffect } from "react"
 import { FormProvider, useForm } from "react-hook-form"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -53,16 +56,32 @@ const ViewSavedPromptContent = ({ data, mutate }: { data: RavenBotAIPrompt, muta
             })
     }
 
+    useEffect(() => {
+
+        const down = (e: KeyboardEvent) => {
+            if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                methods.handleSubmit(onSubmit)()
+            }
+        }
+
+        document.addEventListener('keydown', down)
+        return () => document.removeEventListener('keydown', down)
+    }, [])
+
     return <form onSubmit={methods.handleSubmit(onSubmit)}>
         <FormProvider {...methods}>
             <SettingsContentContainer>
                 <SettingsPageHeader
                     title={data.name}
                     headerBadges={isDirty ? [{ label: "Not Saved", color: "red" }] : undefined}
-                    actions={<Button type='submit' disabled={loading}>
-                        {loading && <Loader className="text-white" />}
-                        {loading ? "Saving" : "Save"}
-                    </Button>}
+                    actions={<HStack>
+                        <CommonSettingsMenu doctype="Raven Bot AI Prompt" docname={data.name} label={"Saved Prompt/Command"} />
+                        <Button type='submit' disabled={loading}>
+                            {loading && <Loader className="text-white" />}
+                            {loading ? "Saving" : "Save"}
+                        </Button>
+                    </HStack>}
                     breadcrumbs={[{ label: 'Commands', href: '../' }, { label: data.name, href: '', copyToClipboard: true }]}
                 />
                 <ErrorBanner error={error} />

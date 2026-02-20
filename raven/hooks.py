@@ -129,6 +129,13 @@ after_uninstall = "raven.uninstall.after_uninstall"
 # Hook on document methods and events
 
 doc_events = {
+	"*": {
+		"after_insert": "raven.raven_integrations.doctype.raven_document_notification.raven_document_notification.run_document_notification",
+		"on_update": "raven.raven_integrations.doctype.raven_document_notification.raven_document_notification.run_document_notification",
+		"on_trash": "raven.raven_integrations.doctype.raven_document_notification.raven_document_notification.run_document_notification",
+		"on_cancel": "raven.raven_integrations.doctype.raven_document_notification.raven_document_notification.run_document_notification",
+		"on_submit": "raven.raven_integrations.doctype.raven_document_notification.raven_document_notification.run_document_notification",
+	},
 	"User": {
 		"after_insert": "raven.raven.doctype.raven_user.raven_user.add_user_to_raven",
 		"on_update": "raven.raven.doctype.raven_user.raven_user.add_user_to_raven",
@@ -149,23 +156,28 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# "all": [
-# "raven.tasks.all"
-# ],
-# "daily": [
-# "raven.tasks.daily"
-# ],
-# "hourly": [
-# "raven.tasks.hourly"
-# ],
-# "weekly": [
-# "raven.tasks.weekly"
-# ],
-# "monthly": [
-# "raven.tasks.monthly"
-# ],
-# }
+scheduler_events = {
+	# "all": [
+	# 	"raven.scheduler.all"
+	# ],
+	# "daily": [
+	# 	"raven.scheduler.daily"
+	# ],
+	# "hourly": [
+	# 	"raven.scheduler.hourly"
+	# ],
+	# "weekly": [
+	# 	"raven.scheduler.weekly"
+	# ],
+	# "monthly": [
+	# 	"raven.scheduler.monthly"
+	# ],
+	"daily_maintenance": ["raven.scheduler.daily.sync_invalid_tokens"],
+	"cron": {
+		# run every 5 minutes
+		"*/5 * * * *": ["raven.scheduler.close_expired_polls.close_expired_polls"]
+	},
+}
 
 # Testing
 # -------
@@ -239,6 +251,9 @@ permission_query_conditions = {
 	"Raven Message": "raven.permissions.raven_message_query",
 	"Raven Poll": "raven.permissions.raven_poll_query",
 	"Raven Poll Vote": "raven.permissions.raven_poll_vote_query",
+	"Raven Workspace": "raven.permissions.raven_workspace_query",
+	"Raven Workspace Member": "raven.permissions.raven_workspace_member_query",
+	"Raven Channel Member": "raven.permissions.raven_channel_member_query",
 }
 
 has_permission = {
@@ -256,5 +271,11 @@ on_session_creation = "raven.api.user_availability.set_user_active"
 on_logout = "raven.api.user_availability.set_user_inactive"
 
 export_python_type_annotations = True
+require_type_annotated_api_methods = True
 
 raven_document_link_override = "raven.api.document_link.get_new_app_document_links"
+
+# Translation
+# ------------
+# List of apps whose translatable strings should be excluded from this app's translations.
+ignore_translatable_strings_from = ["frappe"]

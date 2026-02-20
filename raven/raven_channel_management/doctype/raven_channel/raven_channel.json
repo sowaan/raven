@@ -25,8 +25,13 @@
   "is_archived",
   "section_break_wlnt",
   "last_message_timestamp",
+  "dm_user_1",
+  "dm_user_2",
   "column_break_eckt",
   "last_message_details",
+  "section_break_acpc",
+  "pinned_messages",
+  "pinned_messages_string",
   "ai_tab",
   "is_ai_thread",
   "openai_thread_id",
@@ -175,6 +180,21 @@
    "read_only": 1
   },
   {
+   "fieldname": "section_break_acpc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "pinned_messages",
+   "fieldtype": "Table",
+   "label": "Pinned Messages",
+   "options": "Raven Pinned Messages"
+  },
+  {
+   "fieldname": "pinned_messages_string",
+   "fieldtype": "Small Text",
+   "label": "Pinned Messages String"
+  },
+  {
    "fieldname": "workspace",
    "fieldtype": "Link",
    "label": "Workspace",
@@ -186,6 +206,22 @@
    "fieldname": "is_dm_thread",
    "fieldtype": "Check",
    "label": "Is DM Thread",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_direct_message;",
+   "fieldname": "dm_user_1",
+   "fieldtype": "Link",
+   "label": "DM User 1",
+   "options": "Raven User",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_direct_message;",
+   "fieldname": "dm_user_2",
+   "fieldtype": "Link",
+   "label": "DM User 2",
+   "options": "Raven User",
    "read_only": 1
   }
  ],
@@ -200,7 +236,7 @@
    "link_fieldname": "channel_id"
   }
  ],
- "modified": "2024-12-08 01:24:55.359995",
+ "modified": "2026-01-08 12:58:41.748067",
  "modified_by": "Administrator",
  "module": "Raven Channel Management",
  "name": "Raven Channel",

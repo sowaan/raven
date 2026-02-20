@@ -1,5 +1,6 @@
 import { Loader } from "@/components/common/Loader"
 import MessageActionForm from "@/components/feature/message-actions/MessageActionForm"
+import CommonSettingsMenu from "@/components/feature/settings/common/CommonSettingsMenu"
 import { ErrorBanner } from "@/components/layout/AlertBanner/ErrorBanner"
 import { FullPageLoader } from "@/components/layout/Loaders/FullPageLoader"
 import PageContainer from "@/components/layout/Settings/PageContainer"
@@ -7,9 +8,9 @@ import SettingsContentContainer from "@/components/layout/Settings/SettingsConte
 import SettingsPageHeader from "@/components/layout/Settings/SettingsPageHeader"
 import { HStack } from "@/components/layout/Stack"
 import { RavenMessageAction } from "@/types/RavenIntegrations/RavenMessageAction"
-import { isEmpty } from "@/utils/validations"
 import { Button } from "@radix-ui/themes"
 import { useFrappeGetDoc, useFrappeUpdateDoc, SWRResponse } from "frappe-react-sdk"
+import { useEffect } from "react"
 import { FormProvider, useForm } from "react-hook-form"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -40,9 +41,7 @@ const ViewMessageActionContent = ({ data, mutate }: { data: RavenMessageAction, 
         defaultValues: data
     })
 
-    const { formState: { dirtyFields } } = methods
-
-    const isDirty = !isEmpty(dirtyFields)
+    const { formState: { isDirty } } = methods
 
 
     const onSubmit = (data: RavenMessageAction) => {
@@ -54,6 +53,19 @@ const ViewMessageActionContent = ({ data, mutate }: { data: RavenMessageAction, 
             })
     }
 
+    useEffect(() => {
+
+        const down = (e: KeyboardEvent) => {
+            if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                methods.handleSubmit(onSubmit)()
+            }
+        }
+
+        document.addEventListener('keydown', down)
+        return () => document.removeEventListener('keydown', down)
+    }, [])
+
 
 
     return <form onSubmit={methods.handleSubmit(onSubmit)}>
@@ -63,6 +75,7 @@ const ViewMessageActionContent = ({ data, mutate }: { data: RavenMessageAction, 
                     title={data.action_name}
                     headerBadges={isDirty ? [{ label: "Not Saved", color: "red" }] : undefined}
                     actions={<HStack>
+                        <CommonSettingsMenu doctype="Raven Message Action" docname={data.name} label={"Message Action"} />
                         <Button type='submit' disabled={loading}>
                             {loading && <Loader className="text-white" />}
                             {loading ? "Saving" : "Save"}

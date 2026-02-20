@@ -17,32 +17,32 @@ interface UserAvatarProps extends Partial<AvatarProps> {
 
 export const getInitials = (name?: string) => {
     if (!name) return ''
-    const [firstName, lastName] = name.split(' ')
-    return firstName[0] + (lastName?.[0] ?? '')
+    const [firstName, lastName] = name.trim().split(' ')
+    return ((firstName?.[0] ?? '') + (lastName?.[0] ?? '')).toUpperCase()
 }
 
 const getIconSize = (size: AvatarProps['size']) => {
     switch (size) {
         case '1':
-            return '0.8rem'
+            return '14px'
         case '2':
-            return '1rem'
+            return '16px'
         case '3':
-            return '1rem'
+            return '18px'
         case '4':
-            return '1.1rem'
+            return '20px'
         case '5':
-            return '1.2rem'
+            return '22px'
         case '6':
-            return '1.5rem'
+            return '24px'
         case '7':
-            return '1.7rem'
+            return '26px'
         case '8':
-            return '1.8rem'
+            return '28px'
         case '9':
-            return '2rem'
+            return '30px'
         default:
-            return '1rem'
+            return '16px'
 
     }
 }
